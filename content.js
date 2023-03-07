@@ -15,6 +15,17 @@ const saveOrder = () => {
     chrome.storage.local.set({'saved': courseOrders});
 };
 
+const observer = new MutationObserver((mutations, ob) => {
+    for(const mutation of mutations) {
+        if (mutation.type === 'childList') {
+            $('#sortable_table').remove();
+            console.log("Course deleted");
+            sortDesiredCourse();
+            break;
+        }
+    }
+});
+
 const sortDesiredCourse = () => {
     if($('#sortable_table').length != 0) {
         return;
@@ -152,17 +163,6 @@ const sortDesiredCourse = () => {
     saveOrder();
 }
 
-const observer = new MutationObserver((mutations, ob) => {
-    for(const mutation of mutations) {
-        if (mutation.type === 'childList') {
-            $('#sortable_table').remove();
-            console.log("Course deleted");
-            sortDesiredCourse();
-            break;
-        }
-    }
-});
-
 window.addEventListener('hashchange', async() => {
     if(window.location.hash == desiredHash) {
 
@@ -185,6 +185,22 @@ window.addEventListener('hashchange', async() => {
         }
 
         courseOrders = (await chrome.storage.local.get(['saved'])).saved ?? [];
+        
+        let resetBtn = document.createElement('input');
+        resetBtn.setAttribute('type', 'button');
+        resetBtn.className = '{ "color" : "skyblue" } btn_common btn_skyblue btn_small';
+        resetBtn.value = '순서 초기화';
+        
+        resetBtn.addEventListener('click', () => {
+            $('#sortable_table').remove();
+            courseOrders = [];
+            sortDesiredCourse();
+        })
+
+        let timeTableBtn = $('.hyinTemplate > ul > li > span');
+        timeTableBtn[0].children[0].style.display = 'none';
+        timeTableBtn[0].appendChild(resetBtn);
+
 
         observer.observe($('#gdMain > tbody')[0], {childList: true, subtree: false});
         sortDesiredCourse();
