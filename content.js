@@ -12,14 +12,19 @@ const saveOrder = () => {
     sortableList.each(function(idx, course) {
         courseOrders.push(course.children[8].innerText)
     });
-    chrome.storage.local.set({'saved': courseOrders});
+    if(navigator.userAgent.indexOf("Firefox") == -1) {
+        chrome.storage.local.set({'saved': courseOrders});
+    }
+    else {
+        browser.storage.local.set({'saved': courseOrders});
+    }
+
 };
 
 const observer = new MutationObserver((mutations, ob) => {
     for(const mutation of mutations) {
         if (mutation.type === 'childList') {
             $('#sortable_table').remove();
-            console.log("Course deleted");
             sortDesiredCourse();
             break;
         }
@@ -30,6 +35,11 @@ const sortDesiredCourse = () => {
     if($('#sortable_table').length != 0) {
         return;
     }
+
+    let originCourses  = $('#gdMain > tbody > tr'); 
+    if(originCourses.length == 0 || (originCourses.length == 1 && originCourses[0].innerText == "조회를 하지 않았거나 조회된 데이터가 없습니다.")) {
+        return;
+    }                
 
     let newTable = $(document.createElement('tbody'));
     newTable[0].setAttribute('id', 'sortable_table');
@@ -43,19 +53,26 @@ const sortDesiredCourse = () => {
     originTable[0].style.display = 'none';            
     originTable[0].insertAdjacentElement('afterend', newTable[0]);
     
-    let originCourses  = $('#gdMain > tbody > tr'); 
     let cloneCourses = originCourses.clone(true)
 
     for(let i = 0; i < originCourses.length; i++) {
         cloneCourses[i].children[1].removeAttribute('class')
         cloneCourses[i].children[1].children[0].children[0].removeAttribute('id')
+
+        let cloneTarget = cloneCourses[i].children[1].children[0].children[0];
+        let succObserver = new MutationObserver((mutations, ob) => {
+            for(const mutation of mutations) {
+                if(mutation.type == 'attributes' && mutation.attributeName == 'style') {
+                    if(mutation.target.style.display == 'none') {
+                        cloneTarget.style.display = 'none';
+                    }
+                }
+            }
+        })
+        
         cloneCourses[i].children[1].children[0].children[0].addEventListener('click', () => {
             originCourses[i].children[1].children[0].children[0].click();
-            setTimeout(() => {
-                if(originCourses[i].children[1].children[0].children[0].style.display === 'none') {
-                    cloneCourses[i].children[1].children[0].children[0].style.display = 'none';
-                }
-            }, 50)
+            succObserver.observe(originCourses[i].children[1].children[0].children[0], {attributes : true});
         })
         
         cloneCourses[i].children[12].removeAttribute('class')
@@ -184,7 +201,12 @@ window.addEventListener('hashchange', async() => {
             }
         }
 
-        courseOrders = (await chrome.storage.local.get(['saved'])).saved ?? [];
+        if(navigator.userAgent.indexOf("Firefox") == -1) {
+            courseOrders = (await chrome.storage.local.get(['saved'])).saved ?? [];
+        }
+        else {
+            courseOrders = (await browser.storage.local.get(['saved'])).saved ?? [];
+        }
         
         let resetBtn = document.createElement('input');
         resetBtn.setAttribute('type', 'button');
@@ -201,7 +223,6 @@ window.addEventListener('hashchange', async() => {
         timeTableBtn[0].children[0].style.display = 'none';
         timeTableBtn[0].appendChild(resetBtn);
 
-
         observer.observe($('#gdMain > tbody')[0], {childList: true, subtree: false});
         sortDesiredCourse();
     }
@@ -213,7 +234,7 @@ window.addEventListener('hashchange', async() => {
 })
 
 
-//https://stackoverflow.com/questions/35969656/how-can-i-generate-the-opposite-color-according-to-current-color
+//https://stackoverflow.com/questions/35969656
 function invertColor(hex, bw) {
     if (hex.indexOf('#') === 0) {
         hex = hex.slice(1);
