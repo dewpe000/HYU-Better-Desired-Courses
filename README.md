@@ -2,4 +2,4 @@
 
 # 노션
 
-https://clover-whale-d23.notion.site/5ec73105d42d4a74a0c5deeabd215d7b
+https://heegh000.notion.site/5ec73105d42d4a74a0c5deeabd215d7b
